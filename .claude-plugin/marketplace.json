@@ -1,0 +1,19 @@
+{
+  "name": "goosekeeper",
+  "description": "Personal workspace, task, and knowledge management for multi-repo workflows",
+  "owner": {
+    "name": "Feiy Xie"
+  },
+  "plugins": [
+    {
+      "name": "goosekeeper",
+      "description": "Personal workspace, task, and knowledge management system for multi-repo workflows",
+      "version": "0.1.0",
+      "author": {
+        "name": "Feiy Xie"
+      },
+      "source": "./plugins/goosekeeper",
+      "category": "productivity"
+    }
+  ]
+}

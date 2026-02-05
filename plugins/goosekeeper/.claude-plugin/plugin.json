@@ -1,0 +1,11 @@
+{
+  "name": "goosekeeper",
+  "version": "0.1.0",
+  "description": "Personal workspace, task, and knowledge management system for multi-repo workflows",
+  "author": {
+    "name": "Feiy Xie"
+  },
+  "keywords": ["workspace", "task-management", "multi-repo", "knowledge", "handoff"],
+  "commands": "./commands/",
+  "hooks": "./hooks/hooks.json"
+}
