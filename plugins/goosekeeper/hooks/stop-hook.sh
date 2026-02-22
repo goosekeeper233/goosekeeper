@@ -4,11 +4,11 @@
 # Logs semantic history entries from progress.md and git commits
 # Non-blocking - saves state silently and allows exit
 
-set -euo pipefail
+set -o pipefail
 
 # Paths
 MY_DIR="$HOME/.claude/my"
-SESSION_FILE="$MY_DIR/session.json"
+LEGACY_SESSION="$MY_DIR/session.json"
 HISTORY_DIR="$MY_DIR/history"
 TASKS_DIR="$MY_DIR/tasks"
 
@@ -21,6 +21,9 @@ TODAY=$(date +"%Y-%m-%d")
 
 # Ensure history directory exists
 mkdir -p "$HISTORY_DIR"
+
+# Resolve per-process session file
+source "$(dirname "$0")/lib/resolve-session.sh"
 
 # Check if session state exists
 if [[ ! -f "$SESSION_FILE" ]]; then
@@ -42,7 +45,7 @@ if [[ -n "$TASK_ID" ]]; then
     # Extract completed items (lines starting with "- [x]")
     COMPLETED_ITEMS=$(grep '^- \[x\]' "$PROGRESS_FILE" 2>/dev/null | \
       sed 's/^- \[x\] //' | \
-      tail -10)
+      tail -10 || true)
 
     # Extract next steps (lines after "## Next" until next section or EOF)
     NEXT_ITEMS=$(awk '/^## Next/{found=1; next} /^## [^N]/{if(found) exit} found && /^[^$]/' "$PROGRESS_FILE" 2>/dev/null | \
@@ -50,7 +53,7 @@ if [[ -n "$TASK_ID" ]]; then
       grep -v '^$' | \
       head -3 | \
       tr '\n' '|' | \
-      sed 's/|$//')
+      sed 's/|$//' || true)
 
     if [[ -n "$COMPLETED_ITEMS" ]]; then
       ACTIONS=$(echo "$COMPLETED_ITEMS" | jq -R -s 'split("\n") | map(select(length > 0)) | .[0:10]')
@@ -111,7 +114,10 @@ if [[ -n "$TASK_ID" ]]; then
   fi
 fi
 
-# Keep session.json so SessionStart hook can inject context on next session.
-# Only /start-task and /resume-task overwrite it.
+# ── Persist state for next session and clean up ──────────────────────────
+# Copy per-process session state to legacy session.json so that the next
+# SessionStart hook (with a new PID) can pick up where we left off.
+cp "$SESSION_FILE" "$LEGACY_SESSION" 2>/dev/null
+rm -f "$SESSION_FILE"
 
 exit 0

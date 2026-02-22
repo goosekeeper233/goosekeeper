@@ -5,14 +5,16 @@
 # If not, outputs a reminder. This acts as enforcement for the
 # incremental-updates rule.
 
-set -euo pipefail
+set -o pipefail
 
 MY_DIR="$HOME/.claude/my"
-SESSION_FILE="$MY_DIR/session.json"
 HISTORY_DIR="$MY_DIR/history"
 MARKER_FILE="$MY_DIR/.last-update-check"
 TODAY=$(date +"%Y-%m-%d")
 HISTORY_FILE="$HISTORY_DIR/$TODAY.jsonl"
+
+# Resolve per-process session file
+source "$(dirname "$0")/lib/resolve-session.sh"
 
 # No session = no check needed
 if [[ ! -f "$SESSION_FILE" ]]; then

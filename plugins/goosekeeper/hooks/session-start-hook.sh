@@ -4,20 +4,48 @@
 # Injects active task context into the session at startup
 # Outputs JSON with additionalContext for Claude Code to consume
 
-set -euo pipefail
+set -o pipefail
 
 # Paths
 MY_DIR="$HOME/.claude/my"
-SESSION_FILE="$MY_DIR/session.json"
 TASKS_DIR="$MY_DIR/tasks"
+LEGACY_SESSION="$MY_DIR/session.json"
 
-# If no session state exists, nothing to inject
-if [[ ! -f "$SESSION_FILE" ]]; then
+# Resolve per-process session file
+source "$(dirname "$0")/lib/resolve-session.sh"
+
+# ── Clean up stale session files for dead processes ──────────────────────
+for f in "$SESSIONS_DIR"/*.json; do
+  [[ -f "$f" ]] || continue
+  stale_pid=$(basename "$f" .json)
+  # Skip non-numeric filenames (e.g., "default.json")
+  [[ "$stale_pid" =~ ^[0-9]+$ ]] || continue
+  # Skip our own session file
+  [[ "$stale_pid" == "$CLAUDE_PID" ]] && continue
+  # Remove if the process no longer exists
+  if ! ps -p "$stale_pid" > /dev/null 2>&1; then
+    rm -f "$f"
+  fi
+done
+
+# ── Determine which session file to read ─────────────────────────────────
+# Prefer per-process session file (if it somehow already exists).
+# Fall back to legacy session.json (cross-session persistence).
+SOURCE_FILE=""
+if [[ -f "$SESSION_FILE" ]]; then
+  SOURCE_FILE="$SESSION_FILE"
+elif [[ -f "$LEGACY_SESSION" ]]; then
+  SOURCE_FILE="$LEGACY_SESSION"
+  # Migrate: copy legacy state to per-process file
+  cp "$LEGACY_SESSION" "$SESSION_FILE"
+fi
+
+if [[ -z "$SOURCE_FILE" ]]; then
   exit 0
 fi
 
 # Read session state
-SESSION_DATA=$(cat "$SESSION_FILE")
+SESSION_DATA=$(cat "$SOURCE_FILE")
 TASK_ID=$(echo "$SESSION_DATA" | jq -r '.task // empty')
 WORKSPACE=$(echo "$SESSION_DATA" | jq -r '.workspace // empty')
 SESSION_START=$(echo "$SESSION_DATA" | jq -r '.started // empty')

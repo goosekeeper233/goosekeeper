@@ -30,8 +30,22 @@ Load the specified workspace from `~/.claude/my/workspaces/<workspace_name>.json
    - Don't load all services automatically
    - Claude can look up services on-demand when needed
 
-5. Update session state in `~/.claude/my/session.json`:
-   - If file exists, update the `workspace` field
+5. **Determine session file path** by running this Bash command:
+   ```bash
+   SESSIONS_DIR="$HOME/.claude/my/sessions"; mkdir -p "$SESSIONS_DIR"
+   PID=$$; for i in 1 2 3 4 5; do
+     P=$(ps -o ppid= -p $PID 2>/dev/null | tr -d ' ')
+     [ -z "$P" ] || [ "$P" = "1" ] || [ "$P" = "0" ] && break
+     COMM=$(ps -o comm= -p "$P" 2>/dev/null)
+     echo "$COMM" | grep -qiE 'claude|node' && { echo "$SESSIONS_DIR/$P.json"; exit 0; }
+     PID=$P
+   done
+   echo "$SESSIONS_DIR/${PPID:-default}.json"
+   ```
+   Use the output as `SESSION_FILE_PATH`.
+
+6. Update session state in `SESSION_FILE_PATH`:
+   - If file exists, update the `workspace` field (preserve other fields)
    - If file doesn't exist, create with just workspace:
      ```json
      {
@@ -41,7 +55,7 @@ Load the specified workspace from `~/.claude/my/workspaces/<workspace_name>.json
      ```
    This enables the stop hook to auto-log history when session ends.
 
-6. Output summary:
+7. Output summary:
    ```
    Workspace: <name>
 

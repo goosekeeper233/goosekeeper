@@ -5,15 +5,17 @@
 # Matcher: Write|Edit — fires after file writes/edits
 # Lightweight — append-only, no blocking
 
-set -euo pipefail
+set -o pipefail
 
 # Paths
 MY_DIR="$HOME/.claude/my"
-SESSION_FILE="$MY_DIR/session.json"
 TASKS_DIR="$MY_DIR/tasks"
 
 # Read hook input from stdin
 HOOK_INPUT=$(cat)
+
+# Resolve per-process session file
+source "$(dirname "$0")/lib/resolve-session.sh"
 
 # If no session state, nothing to track
 if [[ ! -f "$SESSION_FILE" ]]; then

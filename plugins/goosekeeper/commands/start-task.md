@@ -15,7 +15,21 @@ Create a new task or load an existing task from `~/.claude/my/tasks/<task_id>/`.
 
 ## Steps
 
-1. Write session state to `~/.claude/my/session.json` FIRST (enables hooks immediately):
+1. **Determine session file path** by running this Bash command:
+   ```bash
+   SESSIONS_DIR="$HOME/.claude/my/sessions"; mkdir -p "$SESSIONS_DIR"
+   PID=$$; for i in 1 2 3 4 5; do
+     P=$(ps -o ppid= -p $PID 2>/dev/null | tr -d ' ')
+     [ -z "$P" ] || [ "$P" = "1" ] || [ "$P" = "0" ] && break
+     COMM=$(ps -o comm= -p "$P" 2>/dev/null)
+     echo "$COMM" | grep -qiE 'claude|node' && { echo "$SESSIONS_DIR/$P.json"; exit 0; }
+     PID=$P
+   done
+   echo "$SESSIONS_DIR/${PPID:-default}.json"
+   ```
+   Use the output as `SESSION_FILE_PATH` for all subsequent session file operations.
+
+2. Write session state to `SESSION_FILE_PATH` (the path from step 1):
    ```json
    {
      "task": "<task_id>",
@@ -26,9 +40,9 @@ Create a new task or load an existing task from `~/.claude/my/tasks/<task_id>/`.
    This must happen before any other step so that if the session is interrupted,
    the stop hook and PostToolUse hook can still function correctly.
 
-2. Check if `~/.claude/my/tasks/<task_id>/` exists
+3. Check if `~/.claude/my/tasks/<task_id>/` exists
 
-3. If directory does NOT exist (new task):
+4. If directory does NOT exist (new task):
    - Create the directory with `mkdir -p`
    - Create `prompt.md` with template:
      ```markdown
@@ -53,14 +67,14 @@ Create a new task or load an existing task from `~/.claude/my/tasks/<task_id>/`.
    - Tell user: "Created new task. Please fill in prompt.md with requirements."
    - Show the file path
 
-4. If directory EXISTS (existing task):
+5. If directory EXISTS (existing task):
    - Search history for this task:
      - Grep `~/.claude/my/history/*.jsonl` for entries containing this task_id
      - Show recent entries (last 5-10) to understand previous work
    - Read `prompt.md` for requirements
    - If `prompt.md` specifies a Workspace field:
      - Invoke `/goosekeeper:activate-workspace` for it
-     - Update `~/.claude/my/session.json` to set the `workspace` field
+     - Update `SESSION_FILE_PATH` to set the `workspace` field
    - Read `progress.md` if exists:
      - Show completed items
      - Show in-progress items
@@ -68,7 +82,7 @@ Create a new task or load an existing task from `~/.claude/my/tasks/<task_id>/`.
    - Read `decisions.md` if exists:
      - Summarize key decisions already made
 
-5. Create or update `progress.md`:
+6. Create or update `progress.md`:
    - Set Status to `in_progress`
    - Add session start timestamp
    - Preserve existing content

@@ -4,11 +4,10 @@
 # Saves history entry before compact to preserve context
 # Non-blocking - logs and allows compact to proceed
 
-set -euo pipefail
+set -o pipefail
 
 # Paths
 MY_DIR="$HOME/.claude/my"
-SESSION_FILE="$MY_DIR/session.json"
 HISTORY_DIR="$MY_DIR/history"
 TASKS_DIR="$MY_DIR/tasks"
 
@@ -18,6 +17,9 @@ TODAY=$(date +"%Y-%m-%d")
 
 # Ensure history directory exists
 mkdir -p "$HISTORY_DIR"
+
+# Resolve per-process session file
+source "$(dirname "$0")/lib/resolve-session.sh"
 
 # Check if session state exists
 if [[ ! -f "$SESSION_FILE" ]]; then
